@@ -1,18 +1,27 @@
 package com.communicate.module.library.router;
 
 
+import android.util.Log;
+
 import com.communicate.module.library.annotation.RouterContext;
-import com.communicate.module.library.base.action.BaseAction;
-import com.communicate.module.library.base.action.ErrorAction;
+import com.communicate.module.library.base.provider.ErrorProvider;
 import com.communicate.module.library.base.provider.BaseProvider;
 import com.communicate.module.library.service.CommunicateException;
 import com.communicate.module.library.utils.CommunicateUtil;
+
+import org.reactivestreams.Subscriber;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import rx.Observable;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.Scheduler;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+
 
 public class LocalRouter {
     private static final String TAG = "LocalRouter";
@@ -40,81 +49,82 @@ public class LocalRouter {
 
 
     private class RouteResultWrap {
-        RouterRespone maActionResult;
-        Observable<RouterRespone> maActionResultObservable;
 
-        public RouterRespone route( RouterRequest routerRequest) throws Exception {
-            rxRoute(routerRequest, RouteResultType.MA_ACTION_RESULT);
-            return maActionResult;
+        public RouterRespone route(RouterRequest routerRequest) throws Exception {
+            return route(routerRequest, RouteResultType.MA_ACTION_RESULT);
         }
 
-        public Observable<RouterRespone> rxRoute( RouterRequest routerRequest) throws Exception {
-            RouteResultWrap routeResultWrap = new RouteResultWrap();
-            rxRoute(routerRequest,  RouteResultType.OBSERVABLE);
-            return routeResultWrap.maActionResultObservable;
+        public Observable<RouterRespone> rxRoute(RouterRequest routerRequest) throws Exception {
+            return rxRoute(routerRequest, RouteResultType.OBSERVABLE);
         }
 
 
-        private void rxRoute( RouterRequest routerRequest, RouteResultType type) throws Exception {
-            BaseAction targetAction = findRequestAction(routerRequest);
+        private Observable<RouterRespone> rxRoute(final RouterRequest routerRequest, RouteResultType type) throws Exception {
+            final BaseProvider targetProvider = findRequestProvider(routerRequest);
             // Sync result, return the result immediately.
-            if (!targetAction.isAsync(routerRequest)) {
-                maActionResult = targetAction.invoke(routerRequest);
-                if (type == RouteResultType.OBSERVABLE) {
-                    if(maActionResult.getCode() == RouterRespone.CODE_SUCCESS) {
-                        maActionResultObservable = Observable.just(maActionResult);
+            Observable<RouterRespone> mResultObservable = Observable.create(new ObservableOnSubscribe<RouterRespone>() {
+                @Override
+                public void subscribe(ObservableEmitter<RouterRespone> e) throws Exception {
+                    RouterRespone respone = targetProvider.invoke(routerRequest);
+                    if (respone.getCode() == RouterRespone.CODE_SUCCESS) {
+                        e.onNext(respone);
                     } else {
-                        Observable.error(new CommunicateException(maActionResult.getCode(),maActionResult.getMsg()));
+                        e.onError(new CommunicateException(respone.getCode(), respone.getMsg()));
                     }
-                    return;
-                } else {
-                    return;
                 }
+            });
+            if (!targetProvider.isAsync(routerRequest)) {
+                return mResultObservable;
             }
             // Async result, use the thread pool to execute the task.
             else {
-                LocalTask task = new LocalTask(routerRequest, targetAction);
-                if (type == RouteResultType.OBSERVABLE) {
-                    if(maActionResult.getCode() == RouterRespone.CODE_SUCCESS) {
-                        maActionResultObservable = Observable.from(getThreadPool().submit(task));
-                    } else {
-                        Observable.error(new CommunicateException(maActionResult.getCode(),maActionResult.getMsg()));
-                    }
-                } else {
-                    maActionResult = getThreadPool().submit(task).get();
-                }
-                return;
+                return mResultObservable.subscribeOn(Schedulers.io());
+
+
             }
         }
 
-        private BaseAction findRequestAction(RouterRequest routerRequest) {
+        private RouterRespone route(final RouterRequest routerRequest, RouteResultType type) throws Exception {
+            final BaseProvider targetProvider = findRequestProvider(routerRequest);
+            // Sync result, return the result immediately.
+
+            if (!targetProvider.isAsync(routerRequest)) {
+                RouterRespone respone = targetProvider.invoke(routerRequest);
+                Log.e("RouterRespone",targetProvider + " " + respone);
+                return respone;
+            }
+            // Async result, use the thread pool to execute the task.
+            else {
+                LocalTask task = new LocalTask(routerRequest, targetProvider);
+                return getThreadPool().submit(task).get();
+
+            }
+        }
+
+        private BaseProvider findRequestProvider(RouterRequest routerRequest) {
+            Log.e("xxx", routerRequest.getProvider());
             BaseProvider targetProvider = CommunicateUtil.getProvider(routerRequest.getProvider());
-            ErrorAction defaultNotFoundAction = new ErrorAction(false, RouterRespone.CODE_NOT_FOUND, "Not found the action.");
+            ErrorProvider defaultNotFoundAction = new ErrorProvider(false, RouterRespone.CODE_NOT_FOUND, "Not found the action.");
             if (null == targetProvider) {
                 return defaultNotFoundAction;
             } else {
-                BaseAction targetAction = targetProvider.findAction(routerRequest.getAction());
-                if (null == targetAction) {
-                    return defaultNotFoundAction;
-                } else {
-                    return targetAction;
-                }
+                return targetProvider;
             }
         }
 
         private class LocalTask implements Callable<RouterRespone> {
             private RouterRequest mRequestData;
             private RouterContext mContext;
-            private BaseAction mAction;
+            private BaseProvider mProvider;
 
-            public LocalTask(RouterRequest requestData, BaseAction maAction) {
+            public LocalTask(RouterRequest requestData, BaseProvider provider) {
                 this.mRequestData = requestData;
-                this.mAction = maAction;
+                this.mProvider = provider;
             }
 
             @Override
             public RouterRespone call() throws Exception {
-                RouterRespone result = mAction.invoke(mRequestData);
+                RouterRespone result = mProvider.invoke(mRequestData);
                 return result;
             }
         }
@@ -122,12 +132,12 @@ public class LocalRouter {
 
     }
 
-    public RouterRespone route( RouterRequest routerRequest) throws Exception {
+    public RouterRespone route(RouterRequest routerRequest) throws Exception {
         RouteResultWrap routeResultWrap = new RouteResultWrap();
         return routeResultWrap.route(routerRequest);
     }
 
-    public Observable<RouterRespone> rxRoute( RouterRequest routerRequest) throws Exception {
+    public Observable<RouterRespone> rxRoute(RouterRequest routerRequest) throws Exception {
         RouteResultWrap routeResultWrap = new RouteResultWrap();
         return routeResultWrap.rxRoute(routerRequest);
     }

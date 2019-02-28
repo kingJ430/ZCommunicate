@@ -13,7 +13,6 @@ import com.communicate.module.library.router.RouterRespone;
 import com.communicate.module.library.utils.CommunicateUtil;
 import com.example.test.TestActivity;
 
-import rx.Subscriber;
 
 public class MainActivity extends Activity {
 

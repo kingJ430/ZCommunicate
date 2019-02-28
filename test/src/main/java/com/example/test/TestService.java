@@ -5,7 +5,8 @@ import android.support.v4.app.Fragment;
 
 import com.communicate.module.library.annotation.*;
 
-import rx.Observable;
+import io.reactivex.Observable;
+
 
 /**
  * user: zhangjianfeng
@@ -15,8 +16,8 @@ import rx.Observable;
 
 public interface TestService {
 
-    @RouterPath(provider = "main/Test")
-    Observable<RouterTestData> getData(@RouterContext("context") Context context, @RouterData("data") RouterTestData routerData);
+    @RouterPath(provider = "main/test")
+    Observable<Object> getData(@RouterContext("context") Context context, @RouterData("data") RouterTestData routerData);
 
     @RouterPath(provider = "test/test2")
     Fragment testData();

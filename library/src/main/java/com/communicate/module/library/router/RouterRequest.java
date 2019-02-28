@@ -19,14 +19,12 @@ public class RouterRequest<T> {
     public AtomicBoolean isIdle = new AtomicBoolean(true);
 
     String provider;
-    String action;
     Context context;
     HashMap<String, String> data;
     T requestObject;
 
     public RouterRequest() {
         this.provider = "";
-        this.action = "";
         context = null;
         this.data = new HashMap<>();
     }
@@ -38,10 +36,6 @@ public class RouterRequest<T> {
     }
 
 
-    public RouterRequest action(String action) {
-        this.action = action;
-        return this;
-    }
 
     public RouterRequest context(Context context) {
         this.context = context;
@@ -62,31 +56,19 @@ public class RouterRequest<T> {
         return provider;
     }
 
-    public String getAction() {
-        return action;
-    }
 
     public Context getContext() {
         return context;
     }
 
-    public void setContext(Context context) {
-        this.context = context;
+
+    public String getQuaryValue(String key) {
+        return data.get(key);
     }
 
-    public HashMap<String, String> getData() {
-        return data;
-    }
 
-    public void setData(HashMap<String, String> data) {
-        this.data = data;
-    }
-
-    public T getRequestObject() {
+    public T getQuaryObject() {
         return requestObject;
     }
 
-    public void setRequestObject(T requestObject) {
-        this.requestObject = requestObject;
-    }
 }

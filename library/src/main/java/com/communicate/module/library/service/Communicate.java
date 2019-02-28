@@ -34,6 +34,7 @@ public class Communicate {
                         CommunicateCall<Object> communicateCall = new CommunicateCall<>(serviceMethod, args);
                         boolean isObservable = serviceMethod.isObservable();
                         Log.e("isObservable",isObservable + "");
+
                         if(isObservable) {
                             return serviceMethod.rxAdapt(communicateCall);
                         } else {

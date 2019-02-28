@@ -1,5 +1,7 @@
 package com.communicate.module.library.service;
 
+import android.util.Log;
+
 import com.communicate.module.library.annotation.RouterContext;
 import com.communicate.module.library.annotation.RouterData;
 import com.communicate.module.library.annotation.RouterPath;
@@ -12,8 +14,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 
-import rx.Observable;
-import rx.functions.Func1;
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
+import io.reactivex.functions.Function;
+
 
 /**
  * user: zhangjianfeng
@@ -24,19 +28,19 @@ import rx.functions.Func1;
 public class ServiceMethod<R, T> {
 
     final String provider;
-    final String action;
     private Method mMethod;
     ParameterHandler[] mParameterHandlers;
 
     public ServiceMethod(Builder builder) {
         provider = builder.provider;
-        action = builder.action;
         mMethod = builder.method;
         mParameterHandlers = builder.mParameterHandlers;
     }
 
     public boolean isObservable() {
-        Type returnType = mMethod.getGenericReturnType();
+        Type returnType = mMethod.getReturnType();
+
+//        Log.e("ServiceMethod",returnType +  " " + mMethod.getReturnType());
         if (returnType == Observable.class) {
             return true;
         }
@@ -45,25 +49,30 @@ public class ServiceMethod<R, T> {
 
     public Observable<T> rxAdapt(CommunicateCall communicateCall) throws Exception {
         Type returnType = mMethod.getGenericReturnType();
-        if (returnType == void.class || returnType == Void.class) {
-            LocalRouter.getInstance().route(communicateCall.request());
-            return null;
+        Observable<RouterRespone> result = LocalRouter.getInstance().rxRoute(communicateCall.request());
+        if (returnType == Object.class) {
+            return result.flatMap(new Function<RouterRespone, ObservableSource<T>>() {
+                @Override
+                public ObservableSource<T> apply(RouterRespone routerRespone) throws Exception {
+                    return  (Observable<T>)Observable.just(new Object());
+                }
+            });
         } else {
-            return LocalRouter.getInstance().rxRoute(communicateCall.request())
-                    .flatMap(new Func1<RouterRespone, Observable<T>>() {
+            return result
+                    .flatMap(new Function<RouterRespone, ObservableSource<T>>() {
                         @Override
-                        public Observable<T> call(RouterRespone routerRespone) {
+                        public ObservableSource<T> apply(RouterRespone routerRespone) throws Exception {
                             if (routerRespone.getResult() instanceof Observable) {
                                 return (Observable<T>) routerRespone.getResult();
                             }
                             return (Observable<T>) Observable.just(routerRespone.getResult());
                         }
+
                     });
         }
     }
 
     public T adapt(CommunicateCall communicateCall) throws Exception {
-        Type returnType = mMethod.getGenericReturnType();
         return (T) LocalRouter.getInstance().route(communicateCall.request()).getResult();
 
     }
@@ -143,11 +152,12 @@ public class ServiceMethod<R, T> {
             if (value.isEmpty()) {
                 return;
             }
-            if (value.contains("/")) {
-                String[] values = value.split("/");
-                this.provider = values[0];
-                this.action = values[1];
-            }
+            this.provider = value;
+//            if (value.contains("/")) {
+//                String[] values = value.split("/");
+//                this.provider = values[0];
+//                this.action = values[1];
+//            }
         }
 
     }

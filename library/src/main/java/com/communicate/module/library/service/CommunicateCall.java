@@ -23,8 +23,7 @@ public class CommunicateCall<T> {
 
     RouterRequest request() throws Exception {
         RouterRequest routerRequest = RouterRequestUtil.obtain()
-                .provider(serviceMethod.provider)
-                .action(serviceMethod.action);
+                .provider(serviceMethod.provider);
         return serviceMethod.toRequest(routerRequest,args);
     }
 }

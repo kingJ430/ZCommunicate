@@ -10,7 +10,6 @@ public class RouterRespone<T> {
 
     private int code;
     private String msg;
-    private String data;
     private T result;
 
     RouterRespone(){
@@ -20,25 +19,20 @@ public class RouterRespone<T> {
     private RouterRespone(Builder builder) {
         code = builder.code;
         msg = builder.msg;
-        data = builder.data;
         result = (T) builder.result;
     }
 
     protected RouterRespone(Parcel in) {
         code = in.readInt();
         msg = in.readString();
-        data = in.readString();
         result = (T) in.readParcelable(this.getClass().getClassLoader());
     }
 
 
-    public Object getResult() {
+    public T getResult() {
         return result;
     }
 
-    public String getData() {
-        return data;
-    }
 
     public int getCode() {
         return code;
@@ -53,7 +47,6 @@ public class RouterRespone<T> {
         return "MaActionResult{" +
                 "code=" + code +
                 ", msg='" + msg + '\'' +
-                ", data='" + data + '\'' +
                 ", object=" + result +
                 '}';
     }
@@ -63,7 +56,6 @@ public class RouterRespone<T> {
     public static final class Builder<T> {
         private int code;
         private String msg;
-        private String data;
         private T result;
 
         public Builder() {
@@ -79,10 +71,6 @@ public class RouterRespone<T> {
             return this;
         }
 
-        public Builder data(String val) {
-            data = val;
-            return this;
-        }
 
         public Builder result(T val) {
             result = val;

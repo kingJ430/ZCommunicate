@@ -1,8 +1,8 @@
 package com.communicate.module.library.base.provider;
 
-import com.communicate.module.library.base.action.BaseAction;
+import com.communicate.module.library.router.RouterRequest;
+import com.communicate.module.library.router.RouterRespone;
 
-import java.util.HashMap;
 
 /**
  * user: zhangjianfeng
@@ -10,20 +10,11 @@ import java.util.HashMap;
  * version: 7.3
  */
 
-public abstract class BaseProvider {
+public interface BaseProvider<T> {
 
-    private HashMap<String,BaseAction> mActions;
-    public BaseProvider(){
-        mActions = new HashMap<>();
-    }
-    public void registerAction(String actionName,BaseAction action){
-        mActions.put(actionName,action);
-    }
+    boolean isAsync( RouterRequest<T> routerRequest);
 
-    public BaseAction findAction(String actionName){
-        return mActions.get(actionName);
-    }
+    RouterRespone invoke(RouterRequest<T> routerRequest);
 
-
-    protected abstract String getName();
+    String getName();
 }

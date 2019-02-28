@@ -72,18 +72,18 @@ public class ActionPrecessor extends AbstractProcessor {
             return false;
         } else {
             Set<? extends Element> provideList = roundEnvironment.getElementsAnnotatedWith(Provider.class);
-            Set<? extends Element> actionList = roundEnvironment.getElementsAnnotatedWith(Action.class);
-            if (provideList.isEmpty() || actionList.isEmpty()) {
+//            Set<? extends Element> actionList = roundEnvironment.getElementsAnnotatedWith(Action.class);
+            if (provideList.isEmpty() ) {
                 return false;
             } else {
                 String aptModuleName = "PrividerMap" + mModuleName;
-                generateProviderMapping(aptModuleName, roundEnvironment,provideList,actionList);
+                generateProviderMapping(aptModuleName, roundEnvironment,provideList);
             }
         }
         return false;
     }
 
-    private void generateProviderMapping(String fileName, RoundEnvironment roundEnv,Set<? extends Element> provideList,Set<? extends Element> actionList) {
+    private void generateProviderMapping(String fileName, RoundEnvironment roundEnv,Set<? extends Element> provideList) {
 
         ClassName communicateUtil = ClassName.get("com.communicate.module.library.utils", "CommunicateUtil");
 
@@ -111,22 +111,22 @@ public class ActionPrecessor extends AbstractProcessor {
             }
         }
 
-        for (Element element : actionList) {
-            if (element.getKind() == ElementKind.CLASS) {
-                Action action = element.getAnnotation(Action.class);
-
-                ClassName actionClassName = ClassName.get((TypeElement) element);
-                initBuilder.addStatement("$T $N = new $T()", actionClassName, actionClassName.simpleName().toLowerCase(), actionClassName);
-                String name = actionClassName.simpleName().toLowerCase() +".getName()";
-                for(ProviderElement providerElement : providerElements) {
-                    if (action.privider().equals(providerElement.getProviderName())) {
-                        initBuilder.addCode(providerElement.getProviderCalssName() + ".registerAction($N,$N);",name,actionClassName.simpleName().toLowerCase());
-                        break;
-                    }
-                }
-
-            }
-        }
+//        for (Element element : actionList) {
+//            if (element.getKind() == ElementKind.CLASS) {
+//                Action action = element.getAnnotation(Action.class);
+//
+//                ClassName actionClassName = ClassName.get((TypeElement) element);
+//                initBuilder.addStatement("$T $N = new $T()", actionClassName, actionClassName.simpleName().toLowerCase(), actionClassName);
+//                String name = actionClassName.simpleName().toLowerCase() +".getName()";
+//                for(ProviderElement providerElement : providerElements) {
+//                    if (action.privider().equals(providerElement.getProviderName())) {
+//                        initBuilder.addCode(providerElement.getProviderCalssName() + ".registerAction($N,$N);",name,actionClassName.simpleName().toLowerCase());
+//                        break;
+//                    }
+//                }
+//
+//            }
+//        }
         TypeSpec providerInit = TypeSpec.classBuilder(fileName)
                 .addModifiers(Modifier.PUBLIC)
                 .addMethod(initBuilder.build())
